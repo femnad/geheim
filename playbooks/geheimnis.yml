@@ -1,0 +1,453 @@
+---
+- hosts:
+    "{{ host | default('v') }}"
+  name:
+    Start the instance
+  strategy:
+    debug
+
+  vars_files:
+    - geheim_vars.yml
+
+  tasks:
+    - name:
+        Download the private and public key
+      aws_s3:
+        mode:
+          get
+        profile:
+          "{{ aws_profile }}"
+        region:
+          "{{ aws_region }}"
+        bucket:
+          "{{ s3_ssh_keys_bucket }}"
+        dest:
+          "{{ item.dest }}"
+        object:
+          "{{ item.object }}"
+      with_items:
+        - {dest: "{{ local_private_key_path }}", object: "{{ s3_private_key_object }}"}
+        - {dest: "{{ local_public_key_path }}", object: "{{ s3_public_key_object }}"}
+
+    - name:
+        Set permissions of the private key
+      file:
+        path:
+          "{{ local_private_key_path }}"
+        mode:
+          '0400'
+
+    - name:
+        Determine public IP
+      uri:
+        url:
+          http://ipinfo.io/json
+        return_content:
+          yes
+      register:
+        public_ip
+
+    - name:
+        Create ad-hoc security group
+      ec2_group:
+        name:
+          "{{ security_group_name }}"
+        description:
+          Like tears in the rain
+        profile:
+          "{{ aws_profile }}"
+        region:
+          "{{ aws_region }}"
+        vpc_id:
+          "{{ instance_vpc_id }}"
+        rules:
+          - proto:
+              tcp
+            from_port:
+              22
+            to_port:
+              22
+            cidr_ip:
+              "{{ public_ip.json.ip}}/32"
+      register:
+        adhoc_group
+
+    - name: Create the private key
+      ec2_key:
+        name: "{{ instance_key_pair_name }}"
+        key_material: "{{ item }}"
+        profile: "{{ aws_profile }}"
+        region: "{{ aws_region }}"
+      with_file: "{{ local_public_key_path }}"
+
+    - name:
+        Start instance
+      ec2:
+        assign_public_ip: yes
+        count_tag:
+          Name:
+            "{{ instance_tag_name }}"
+        exact_count:
+          1
+        image:
+          "{{ image_id }}"
+        instance_type:
+          t2.micro
+        key_name:
+          "{{ instance_key_pair_name }}"
+        profile:
+          "{{ aws_profile }}"
+        region:
+          "{{ aws_region }}"
+        vpc_subnet_id:
+          "{{ instance_subnet_id }}"
+        group_id:
+          "{{ adhoc_group.group_id }}"
+        instance_tags:
+          Name:
+            "{{ instance_tag_name }}"
+        wait:
+          yes
+
+    - name:
+        Gather instance facts
+      ec2_instance_facts:
+        filters:
+          'tag:Name':
+            "{{ instance_tag_name }}"
+          'instance-state-name':
+            running
+        profile:
+          "{{ aws_profile }}"
+        region:
+          "{{ aws_region }}"
+      register:
+        located_instances
+      tags:
+        ready-to-sync
+
+    - name:
+        Save the instances!
+      set_fact:
+        instances:
+          "{{ located_instances.instances }}"
+      tags:
+        ready-to-sync
+
+    - name:
+        Check if only one instance was filtered
+      assert:
+        that:
+          "{{ (instances | length) == 1 }}"
+      tags:
+        ready-to-sync
+
+    - name:
+        Will come in handy later
+      set_fact:
+        instance:
+          "{{ instances | first }}"
+      tags:
+        ready-to-sync
+
+    - name:
+        Add started instance as Ansible host
+      add_host:
+        hostname:
+          "{{ instance.public_ip_address }}"
+        groupname:
+          started
+        ansible_ssh_private_key_file:
+          "{{ local_private_key_path }}"
+        ansible_ssh_user:
+          "{{ instance_ssh_user }}"
+      tags: volume-ready
+
+    - name:
+        Wait for SSH to be available
+      wait_for:
+        host:
+          "{{ instance.public_ip_address }}"
+        port:
+          22
+        state:
+          started
+
+    - name:
+        Modify the SSH config
+      command:
+        hazy geheim {{ instance.public_ip_address }}
+      tags:
+        ready-to-sync
+
+    - name:
+        Attach the volume
+      ec2_vol:
+        device_name: "{{ device_path }}"
+        id:
+          "{{ volume_id }}"
+        instance:
+          "{{ instance.instance_id }}"
+        profile:
+          "{{ aws_profile }}"
+        region:
+          "{{ aws_region }}"
+
+- hosts:
+    started
+  name:
+    Get ready for the dark deed
+
+  vars_files:
+    - geheim_vars.yml
+
+  vars:
+    encryption_passphrase_lookup_key:
+      "{{ password_lookup_key }}"
+    encryption_passphrase:
+      "{{ lookup('passwordstore', encryption_passphrase_lookup_key) }}"
+
+  tasks:
+    - name:
+        Add the user
+      user:
+        name:
+          "{{ repo_user_name }}"
+        shell:
+          /bin/bash
+      become:
+        yes
+
+    - name:
+        Install git
+      yum:
+        name:
+          git
+      become:
+        yes
+
+    - name: Get public keys from GitHub
+      uri:
+        url:
+          https://api.github.com/users/{{ github_username }}/keys
+        return_content:
+          yes
+        body_format:
+          json
+      register:
+        github_public_keys
+
+    - name: Add authorized keys
+      authorized_key:
+        key:
+          "{{ item.key }}"
+        user:
+          "{{ repo_user_name }}"
+      with_items:
+        "{{ github_public_keys.json }}"
+      become:
+        yes
+
+    - name: Save the key file
+      lineinfile:
+        path: "{{ keyfile_path }}"
+        create: yes
+        owner: root
+        group: root
+        mode: '0400'
+        line: "{{ encryption_passphrase }}"
+      become: yes
+      tags: volume-ready
+
+    - name: Remove new line character from the key file
+      replace:
+        path: "{{ keyfile_path }}"
+        regexp: '\n'
+        replace: ''
+      become: yes
+      tags: volume-ready
+
+    - name: Open the device
+      command:
+        cryptsetup open {{ device_path }} {{ mapping_name }} --key-file {{ keyfile_path }}
+      become:
+        yes
+      tags: volume-ready
+
+    - name: Shred the key file
+      command: shred "{{ keyfile_path }}"
+      become: yes
+
+    - name: Remove the key file
+      file:
+        path: "{{ keyfile_path }}"
+        state: absent
+      become: yes
+
+    - name:
+        Initialize the mount path
+      file:
+        path:
+          "{{ absolute_mount_path }}"
+        state:
+          directory
+        owner:
+          "{{ repo_user_name}}"
+        group:
+          "{{ repo_user_name}}"
+      become:
+        yes
+
+    - name:
+        Start the deed
+      mount:
+        src:
+          "{{ filesystem_path }}"
+        path:
+          "{{ absolute_mount_path }}"
+        fstype:
+          ext4
+        state:
+          mounted
+      become:
+        yes
+
+    - name: Make sure user ownership is correct
+      file:
+        state: directory
+        path: "{{ absolute_mount_path }}"
+        owner: "{{ repo_user_name }}"
+        group: "{{ repo_user_name }}"
+        recurse: yes
+      become: yes
+
+    - pause:
+        prompt:
+          Continue when the dark deed you requested is done
+
+    - name:
+        Sync disks
+      command:
+        sync
+      become:
+        yes
+
+    - name:
+        End the deed
+      mount:
+        path:
+          "{{ absolute_mount_path }}"
+        state:
+          unmounted
+      become:
+        yes
+
+    - name: Close the device
+      command:
+        cryptsetup close {{ mapping_name }}
+      become:
+        yes
+
+- hosts:
+    "{{ host | default('v') }}"
+  name:
+    Wait, cleanup and stop the instance after the deed is done
+
+  vars_files:
+    - geheim_vars.yml
+
+  tasks:
+    - name:
+        Detach the volume
+      ec2_vol:
+        id:
+          "{{ volume_id }}"
+        instance:
+          None
+        profile:
+          "{{ aws_profile }}"
+        region:
+          "{{ aws_region }}"
+      tags: cleanup
+
+    - name: Determine snapshot name
+      shell: "date +'%F_%T' | tr '-' '_'"
+      register: snapshot_name
+      tags: snapshot
+
+    - name: Create a snapshot of the volume
+      command: awless -f -p {{ aws_profile }} -r {{ aws_region }} create snapshot volume={{ volume_id }} description="{{ snapshot_name.stdout_lines[0] }}"
+      tags: snapshot
+
+    - name:
+        Locate the instance
+      ec2_instance_facts:
+        filters:
+          'tag:Name':
+            "{{ instance_tag_name }}"
+          'instance-state-name':
+            running
+        profile:
+          "{{ aws_profile }}"
+        region:
+          "{{ aws_region }}"
+      register:
+        located_instances
+      tags: cleanup
+
+    - name:
+        Save the instances!
+      set_fact:
+        running_instances:
+          "{{ located_instances.instances }}"
+      tags: cleanup
+
+    - name:
+        Check if only one instance was filtered
+      assert:
+        that:
+          "{{ (running_instances | length) == 1 }}"
+      tags: cleanup
+
+    - vars:
+        running_instance:
+          "{{ running_instances | first }}"
+      name:
+        Terminate the instance
+      ec2:
+        instance_ids:
+          "{{ running_instance.instance_id }}"
+        profile:
+          "{{ aws_profile }}"
+        region:
+          "{{ aws_region }}"
+        state:
+          absent
+        wait:
+          yes
+      tags: cleanup
+
+    - name:
+        Delete the security group
+      ec2_group:
+        name:
+          "{{ security_group_name }}"
+        state:
+          absent
+        profile:
+          "{{ aws_profile }}"
+        region:
+          "{{ aws_region }}"
+      tags: cleanup
+
+    - name:
+        Delete the private and public keys
+      file:
+        path:
+          "{{ item }}"
+        state:
+          absent
+      with_items:
+        - "{{ local_private_key_path }}"
+        - "{{ local_public_key_path }}"
+      tags: cleanup
