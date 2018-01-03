@@ -74,9 +74,6 @@
               22
             cidr_ip:
               "{{ public_ip.json.ip}}/32"
-        tags:
-          Purpose:
-            "{{ security_group_tag }}"
       tags: join-in
       register:
         adhoc_group
