@@ -63,6 +63,8 @@
           "{{ aws_region }}"
         vpc_id:
           "{{ instance_vpc_id }}"
+        purge_rules:
+          no
         rules:
           - proto:
               tcp
@@ -434,22 +436,12 @@
           yes
       tags: cleanup
 
-    - name:
-        Collect security groups to delete
-      ec2_group_facts:
-        filters:
-          'tag:Purpose':
-            "{{ security_group_tag }}"
-      register: security_groups
-      tags: cleanup
-
-    - name: Delete created security groups
+    - name: Delete the ad-hoc security group
       ec2_group:
-        group_id: "{{ item.id }}"
+        name: "{{ security_group_name }}"
         state: absent
         profile: "{{ aws_profile }}"
         region: "{{ aws_region }}"
-      with_items: "{{ security_groups }}"
       tags: cleanup
 
     - name:
@@ -462,4 +454,4 @@
       with_items:
         - "{{ local_private_key_path }}"
         - "{{ local_public_key_path }}"
-      tags: cleanup
+      tags: cleanup, join-in
