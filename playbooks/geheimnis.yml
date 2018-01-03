@@ -28,6 +28,7 @@
       with_items:
         - {dest: "{{ local_private_key_path }}", object: "{{ s3_private_key_object }}"}
         - {dest: "{{ local_public_key_path }}", object: "{{ s3_public_key_object }}"}
+      tags: join-in
 
     - name:
         Set permissions of the private key
@@ -36,6 +37,7 @@
           "{{ local_private_key_path }}"
         mode:
           '0400'
+      tags: join-in
 
     - name:
         Determine public IP
@@ -44,6 +46,7 @@
           http://ipinfo.io/json
         return_content:
           yes
+      tags: join-in
       register:
         public_ip
 
@@ -69,6 +72,10 @@
               22
             cidr_ip:
               "{{ public_ip.json.ip}}/32"
+        tags:
+          Purpose:
+            "{{ security_group_tag }}"
+      tags: join-in
       register:
         adhoc_group
 
@@ -124,7 +131,7 @@
       register:
         located_instances
       tags:
-        ready-to-sync
+        ready-to-sync, join-in
 
     - name:
         Save the instances!
@@ -132,7 +139,7 @@
         instances:
           "{{ located_instances.instances }}"
       tags:
-        ready-to-sync
+        ready-to-sync, join-in
 
     - name:
         Check if only one instance was filtered
@@ -148,7 +155,7 @@
         instance:
           "{{ instances | first }}"
       tags:
-        ready-to-sync
+        ready-to-sync, join-in
 
     - name:
         Add started instance as Ansible host
@@ -178,7 +185,7 @@
       command:
         hazy geheim {{ instance.public_ip_address }}
       tags:
-        ready-to-sync
+        ready-to-sync, join-in
 
     - name:
         Attach the volume
@@ -428,16 +435,21 @@
       tags: cleanup
 
     - name:
-        Delete the security group
+        Collect security groups to delete
+      ec2_group_facts:
+        filters:
+          'tag:Purpose':
+            "{{ security_group_tag }}"
+      register: security_groups
+      tags: cleanup
+
+    - name: Delete created security groups
       ec2_group:
-        name:
-          "{{ security_group_name }}"
-        state:
-          absent
-        profile:
-          "{{ aws_profile }}"
-        region:
-          "{{ aws_region }}"
+        group_id: "{{ item.id }}"
+        state: absent
+        profile: "{{ aws_profile }}"
+        region: "{{ aws_region }}"
+      with_items: "{{ security_groups }}"
       tags: cleanup
 
     - name:
