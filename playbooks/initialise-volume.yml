@@ -1,0 +1,30 @@
+---
+- hosts: geheim
+  name: Initialize the volume
+  remote_user: ec2-user
+  become: yes
+
+  vars:
+    ansible_ssh_private_key_file: "{{ local_private_key_path }}"
+
+  vars_files:
+    - geheim_vars.yml
+
+  tasks:
+    - name: Create a partition
+      parted:
+        device: "{{ device_path }}"
+        number: "{{ device_partition_number }}"
+        state: present
+
+    - name: Encrypt the volume with LUKS
+      command: cryptsetup luksFormat {{ device_partition }} --key-file {{ keyfile_path }}
+
+    - name: Create the mapping
+      command: cryptsetup open {{ device_partition }} {{ mapping_name }} --key-file {{ keyfile_path }}
+
+    - name: Create the filesystem
+      command: mkfs.ext4 {{ device_mapped_path }}
+
+    - name: Remove the mapping
+      command: cryptsetup close {{ mapping_name }}

@@ -275,7 +275,7 @@
 
     - name: Open the device
       command:
-        cryptsetup open {{ device_path }} {{ mapping_name }} --key-file {{ keyfile_path }}
+        cryptsetup open {{ device_partition }} {{ mapping_name }} --key-file {{ keyfile_path }}
       become:
         yes
       tags: volume-ready
@@ -308,7 +308,7 @@
         Start the deed
       mount:
         src:
-          "{{ filesystem_path }}"
+          "{{ device_mapped_path }}"
         path:
           "{{ absolute_mount_path }}"
         fstype:
