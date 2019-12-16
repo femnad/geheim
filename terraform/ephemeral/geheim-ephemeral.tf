@@ -1,6 +1,6 @@
 variable github_user {}
 
-variable geheim_volume_name {}
+variable volume_name {}
 
 variable project {}
 
@@ -84,7 +84,7 @@ resource "google_compute_instance" "geheim_hoster" {
   }
 
   attached_disk {
-    source = var.geheim_volume_name
+    source = var.volume_name
   }
 
 }

@@ -2,6 +2,12 @@ variable project {}
 
 variable service_account_secret {}
 
+variable dns_zone_name {}
+
+variable dns_name {}
+
+variable volume_name {}
+
 variable region {
   default = "europe-west-2"
 }
@@ -10,14 +16,7 @@ variable zone {
   default = "europe-west2-c"
 }
 
-variable dns_zone_name {
-}
-
-variable dns_name {
-}
-
-provider passwordstore {
-}
+provider passwordstore {}
 
 data "passwordstore_secret" "service_account" {
   name = var.service_account_secret
@@ -33,4 +32,10 @@ provider "google" {
 resource "google_dns_managed_zone" "geheim_zone" {
   name     = var.dns_zone_name
   dns_name = var.dns_name
+}
+
+resource "google_compute_disk" "geheim_disk" {
+  name  = var.volume_name
+  size = 10
+  type  = "pd-standard"
 }
