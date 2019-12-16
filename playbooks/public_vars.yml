@@ -1,0 +1,2 @@
+device_path: "/dev/{{ (ansible_devices.keys() | sort)[-1] }}"
+device_partition: 1

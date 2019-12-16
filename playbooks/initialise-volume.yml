@@ -3,14 +3,17 @@
   name: Initialize the volume
   become: yes
 
-  vars:
-    device_path: "/dev/{{ (ansible_devices.keys() | sort)[-1] }}"
-    device_partition: 1
-
   vars_files:
+    - public_vars.yml
     - sync_vars.yml
 
   tasks:
+    - name: Add the user
+      user:
+        name: '{{ repo_user_name }}'
+        shell: /bin/bash
+      become: yes
+
     - name: Create a partition
       parted:
         device: '{{ device_path }}'
@@ -22,18 +25,38 @@
         dest: '{{ keyfile_path }}'
         content: "{{ lookup('passwordstore', password_lookup_key) }}"
 
-    - name: Install cryptsetup
+    - name: Install required packages
       package:
-        name: cryptsetup
+        name:
+          - cryptsetup
+          - git
 
     - name: Encrypt the volume with LUKS
       shell: echo YES | cryptsetup luksFormat {{ device_path }} --key-file {{ keyfile_path }}
+      tags: format
 
     - name: Create the mapping
       command: cryptsetup open {{ device_path }} {{ mapping_name }} --key-file {{ keyfile_path }}
+      tags: open
 
     - name: Create the filesystem
       command: mkfs.ext4 {{ device_mapped_path }}
+      tags: filesystem
+
+    - name: Ensure repo directory
+      file:
+        path: /home/{{ repo_user_name }}/{{ repo_path }}/{{ repo_dir }}
+        state: directory
+        owner: '{{ repo_user_name }}'
+        group: '{{ repo_user_name }}'
+        recurse: true
+      tags: git-init
+
+    - name: Initialize repository
+      command: git init --bare
+      args:
+        chdir: /home/{{ repo_user_name }}/{{ repo_path }}/{{ repo_dir }}
+      tags: git-init
 
     - name: Remove the mapping
       command: cryptsetup close {{ mapping_name }}
