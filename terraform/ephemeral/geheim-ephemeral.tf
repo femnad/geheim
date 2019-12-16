@@ -18,8 +18,7 @@ variable zone {
   default = "europe-west2-c"
 }
 
-variable dns_zone_name {
-}
+variable managed_zone {}
 
 variable dns_name {
 }
@@ -90,17 +89,12 @@ resource "google_compute_instance" "geheim_hoster" {
 
 }
 
-resource "google_dns_managed_zone" "geheim_zone" {
-  name     = var.dns_zone_name
-  dns_name = var.dns_name
-}
-
 resource "google_dns_record_set" "geheim_dns" {
   name = var.dns_name
   type = "A"
   ttl  = 60
 
-  managed_zone = google_dns_managed_zone.geheim_zone.name
+  managed_zone = var.managed_zone
 
   rrdatas = [google_compute_instance.geheim_hoster.network_interface[0].access_config[0].nat_ip]
 }
