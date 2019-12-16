@@ -1,20 +1,30 @@
 variable github_user {}
 
-variable "service_account_secret" {}
+variable geheim_volume_name {}
 
-variable "project" {}
+variable project {}
 
-variable "ssh_user" {}
+variable service_account_secret {}
 
-variable "region" {
+variable ssh_user {}
+
+variable ssh_email {}
+
+variable region {
   default = "europe-west-2"
 }
 
-variable "zone" {
+variable zone {
   default = "europe-west2-c"
 }
 
-provider "passwordstore" {
+variable dns_zone_name {
+}
+
+variable dns_name {
+}
+
+provider passwordstore {
 }
 
 data "passwordstore_secret" "service_account" {
@@ -30,7 +40,7 @@ data "http" "github" {
 }
 
 locals {
-  ssh_format_spec = format("%s:%%s", var.ssh_user)
+  ssh_format_spec = format("%s:%%s %s", var.ssh_user, var.ssh_email)
 }
 
 provider "google" {
@@ -57,11 +67,7 @@ resource "google_compute_firewall" "firewall_ssh" {
 
 resource "google_compute_instance" "geheim_hoster" {
   name = "geheim"
-  machine_type = "f1-micro"
-  scheduling {
-    automatic_restart = false
-    preemptible = true
-  }
+  machine_type = "g1-small"
 
   metadata = {
     ssh-keys = join("\n", formatlist(local.ssh_format_spec, [for key in jsondecode(data.http.github.body): key.key]))
@@ -78,4 +84,23 @@ resource "google_compute_instance" "geheim_hoster" {
     }
   }
 
+  attached_disk {
+    source = var.geheim_volume_name
+  }
+
+}
+
+resource "google_dns_managed_zone" "geheim_zone" {
+  name     = var.dns_zone_name
+  dns_name = var.dns_name
+}
+
+resource "google_dns_record_set" "geheim_dns" {
+  name = var.dns_name
+  type = "A"
+  ttl  = 60
+
+  managed_zone = google_dns_managed_zone.geheim_zone.name
+
+  rrdatas = [google_compute_instance.geheim_hoster.network_interface[0].access_config[0].nat_ip]
 }
