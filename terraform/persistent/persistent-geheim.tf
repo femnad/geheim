@@ -8,6 +8,8 @@ variable dns_name {}
 
 variable volume_name {}
 
+variable state_storage_bucket {}
+
 variable region {
   default = "europe-west-2"
 }
@@ -38,4 +40,9 @@ resource "google_compute_disk" "geheim_disk" {
   name  = var.volume_name
   size = 10
   type  = "pd-standard"
+}
+
+resource "google_storage_bucket" "state-store" {
+  name     = var.state_storage_bucket
+  location = "EUROPE-WEST2"
 }
