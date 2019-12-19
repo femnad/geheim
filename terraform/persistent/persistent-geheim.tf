@@ -12,6 +12,8 @@ variable state_storage_bucket {}
 
 variable tf_service_account {}
 
+variable tf_service_account_display_name {}
+
 variable region {
   default = "europe-west-2"
 }
@@ -58,6 +60,6 @@ resource "google_storage_bucket_acl" "image_store_acl" {
   bucket = var.state_storage_bucket
 
   role_entity = [
-    "WRITER:${google_service_account.tf_service_account.email}"
+    "WRITER:user-${google_service_account.tf_service_account.email}"
   ]
 }
