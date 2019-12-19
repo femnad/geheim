@@ -10,6 +10,8 @@ variable volume_name {}
 
 variable state_storage_bucket {}
 
+variable tf_service_account {}
+
 variable region {
   default = "europe-west-2"
 }
@@ -42,7 +44,20 @@ resource "google_compute_disk" "geheim_disk" {
   type  = "pd-standard"
 }
 
-resource "google_storage_bucket" "state-store" {
+resource "google_storage_bucket" "state_store" {
   name     = var.state_storage_bucket
   location = "EUROPE-WEST2"
+}
+
+resource "google_service_account" "tf_service_account" {
+  account_id   = var.tf_service_account
+  display_name = var.tf_service_account_display_name
+}
+
+resource "google_storage_bucket_acl" "image_store_acl" {
+  bucket = var.state_storage_bucket
+
+  role_entity = [
+    "WRITER:${google_service_account.tf_service_account.email}"
+  ]
 }
