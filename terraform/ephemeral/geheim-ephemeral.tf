@@ -4,7 +4,7 @@ variable volume_name {}
 
 variable project {}
 
-variable service_account_secret {}
+variable service_account_file {}
 
 variable ssh_user {}
 
@@ -29,13 +29,6 @@ terraform {
   backend gcs { }
 }
 
-provider passwordstore {
-}
-
-data "passwordstore_secret" "service_account" {
-  name = var.service_account_secret
-}
-
 data "http" "ipinfo" {
   url = "https://ipinfo.io/json"
 }
@@ -49,7 +42,7 @@ locals {
 }
 
 provider "google" {
-  credentials = data.passwordstore_secret.service_account.contents
+  credentials = var.service_account_file
   project     = var.project
   region      = var.region
   zone = var.zone
