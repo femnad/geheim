@@ -1,30 +1,3 @@
-variable github_user {}
-
-variable volume_name {}
-
-variable project {}
-
-variable service_account_file {}
-
-variable ssh_user {}
-
-variable ssh_email {}
-
-variable region {
-  default = "europe-west-2"
-}
-
-variable zone {
-  default = "europe-west2-c"
-}
-
-variable managed_zone {}
-
-variable dns_name {
-}
-
-variable state_storage_bucket {}
-
 terraform {
   backend gcs { }
 }
@@ -73,7 +46,9 @@ resource "google_compute_instance" "geheim_hoster" {
 
   network_interface {
     network = google_compute_network.network_of_interest.name
-    access_config {}
+    access_config {
+      network_tier = "STANDARD"
+    }
   }
 
   boot_disk {
