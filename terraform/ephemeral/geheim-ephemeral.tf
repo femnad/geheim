@@ -61,6 +61,12 @@ resource "google_compute_instance" "geheim_hoster" {
     source = var.volume_name
   }
 
+  scheduling {
+    preemptible = true
+    automatic_restart = false
+    on_host_maintenance = "TERMINATE"
+  }
+
 }
 
 resource "google_dns_record_set" "geheim_dns" {
