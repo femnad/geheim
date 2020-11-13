@@ -4,8 +4,6 @@ variable volume_name {}
 
 variable project {}
 
-variable service_account_file {}
-
 variable ssh_user {}
 
 variable ssh_email {}
@@ -20,8 +18,7 @@ variable zone {
 
 variable managed_zone {}
 
-variable dns_name {
-}
+variable dns_name {}
 
 variable state_storage_bucket {}
 
