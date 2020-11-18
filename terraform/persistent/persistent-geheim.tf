@@ -29,7 +29,6 @@ data "passwordstore_secret" "service_account" {
 }
 
 provider "google" {
-  credentials = data.passwordstore_secret.service_account.contents
   project     = var.project
   region      = var.region
   zone = var.zone
