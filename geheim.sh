@@ -2,13 +2,14 @@
 set -euEo pipefail
 
 function geheim() {
-    pushd terraform/ephemeral
+    root_dir=$(dirname $0)
+    pushd "${root_dir}/terraform/ephemeral"
     terraform apply -auto-approve
     popd
-    pushd playbooks
+    pushd "${root_dir}/playbooks"
     ansible-playbook enable-password-sync.yml
     popd
-    pushd terraform/ephemeral
+    pushd "${root_dir}/terraform/ephemeral"
     terraform destroy -auto-approve
 }
 
