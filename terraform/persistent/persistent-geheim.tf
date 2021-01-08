@@ -1,7 +1,5 @@
 variable project {}
 
-variable service_account_secret {}
-
 variable dns_zone_name {}
 
 variable dns_name {}
@@ -20,12 +18,6 @@ variable region {
 
 variable zone {
   default = "europe-west2-c"
-}
-
-provider passwordstore {}
-
-data "passwordstore_secret" "service_account" {
-  name = var.service_account_secret
 }
 
 provider "google" {
