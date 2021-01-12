@@ -2,7 +2,7 @@
 set -euEo pipefail
 
 function geheim() {
-    root_dir=$(dirname $0)
+    root_dir=$(dirname $(realpath $0))
     pushd "${root_dir}/terraform/ephemeral"
     terraform apply -auto-approve
     popd
