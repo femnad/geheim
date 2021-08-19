@@ -4,8 +4,7 @@ set -euEo pipefail
 function geheim() {
     if ! ssh-add -l > /dev/null 2>&1
     then
-        echo 'SSH agent has no identities'
-        exit 1
+        ssh-add $HOME/.ssh/$(hostname -s)
     fi
 
     root_dir=$(dirname $(realpath $0))
