@@ -19,6 +19,3 @@ variable zone {
 variable managed_zone {}
 
 variable dns_name {}
-
-variable state_storage_bucket {}
-
