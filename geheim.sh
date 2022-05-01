@@ -47,8 +47,8 @@ function geheim_local() {
     popd
 }
 
-function geheim_no_wait() {
-    export GEHEIM_NO_WAIT=true
+function geheim_wait() {
+    export GEHEIM_WAIT=true
 
     geheim
 }
@@ -95,9 +95,9 @@ function main() {
             shift
             geheim_guest $@
             ;;
-        nowait)
+        wait)
             shift
-            geheim_no_wait $@
+            geheim_wait $@
             ;;
         *)
             echo "Unrecognized subcommand ${subcommand}"
