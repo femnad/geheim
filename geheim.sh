@@ -1,6 +1,15 @@
 #!/usr/bin/env bash
 set -euEo pipefail
 
+function local_sync() {
+    rp="$(realpath $0)"
+    root_dir=$(dirname $rp)
+
+    pushd "${root_dir}/playbooks"
+    ansible-playbook local-sync.yml
+    popd
+}
+
 function geheim_guest() {
     rp="$(realpath $0)"
 
@@ -10,10 +19,13 @@ function geheim_guest() {
         exit 1
     fi
 
+    wait_for_sync=false
+
     if [ $# -ne 1 ]
     then
         ip=$(curl -sS ipinfo.io/json | jq -r .ip)
     else
+        wait_for_sync=true
         ip=$1
     fi
 
@@ -28,7 +40,12 @@ function geheim_guest() {
     terraform apply -auto-approve -var "guest_ip=${ip}"
     popd
 
-    read -p "Press enter to continue. "
+    if ! [ "$wait_for_sync" = true ]
+    then
+        local_sync
+    else
+        read -p "Press enter to continue. "
+    fi
 
     pushd "${root_dir}/terraform/ephemeral/guest"
     terraform destroy -auto-approve -var "guest_ip=${ip}"
@@ -42,9 +59,7 @@ function geheim_local() {
 
     root_dir=$(dirname $(realpath $0))
 
-    pushd "${root_dir}/playbooks"
-    ansible-playbook local-sync.yml
-    popd
+    local_sync
 }
 
 function geheim_wait() {
