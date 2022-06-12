@@ -9,7 +9,7 @@ variable ssh_user {}
 variable ssh_email {}
 
 variable region {
-  default = "europe-west-2"
+  default = "europe-west2"
 }
 
 variable zone {

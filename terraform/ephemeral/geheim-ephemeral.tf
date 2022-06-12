@@ -1,5 +1,5 @@
 terraform {
-  backend gcs { }
+  backend "gcs" {}
 }
 
 data "http" "ipinfo" {
@@ -15,36 +15,45 @@ locals {
 }
 
 provider "google" {
-  project     = var.project
-  region      = var.region
-  zone = var.zone
+  project = var.project
+  region  = var.region
+  zone    = var.zone
+}
+
+resource "google_compute_subnetwork" "geheim-subnet" {
+  name          = "geheim-subnet"
+  ip_cidr_range = "10.1.0.0/16"
+  region        = var.region
+  network       = google_compute_network.network_of_interest.id
 }
 
 resource "google_compute_network" "network_of_interest" {
-  name = "geheim-network"
+  name                    = "geheim-network"
+  auto_create_subnetworks = false
 }
 
 resource "google_compute_firewall" "firewall_ssh" {
-  name = "ssh-allower"
+  name    = "ssh-allower"
   network = google_compute_network.network_of_interest.name
 
   allow {
     protocol = "tcp"
-    ports = ["22"]
+    ports    = ["22"]
   }
   source_ranges = [format("%s/32", jsondecode(data.http.ipinfo.body).ip)]
 }
 
 resource "google_compute_instance" "geheim_hoster" {
-  name = "geheim"
-  machine_type = "g1-small"
+  name         = "geheim"
+  machine_type = "e2-small"
 
   metadata = {
-    ssh-keys = join("\n", formatlist(local.ssh_format_spec, [for key in jsondecode(data.http.github.body): key.key]))
+    ssh-keys = join("\n", formatlist(local.ssh_format_spec, [for key in jsondecode(data.http.github.body) : key.key]))
   }
 
   network_interface {
     network = google_compute_network.network_of_interest.name
+    subnetwork = google_compute_subnetwork.geheim-subnet.name
     access_config {
       network_tier = "STANDARD"
     }
@@ -52,7 +61,7 @@ resource "google_compute_instance" "geheim_hoster" {
 
   boot_disk {
     initialize_params {
-      image = "debian-cloud/debian-10"
+      image = "debian-cloud/debian-11"
     }
   }
 
@@ -61,8 +70,8 @@ resource "google_compute_instance" "geheim_hoster" {
   }
 
   scheduling {
-    preemptible = true
-    automatic_restart = false
+    preemptible         = true
+    automatic_restart   = false
     on_host_maintenance = "TERMINATE"
   }
 
