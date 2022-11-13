@@ -32,15 +32,19 @@ resource "google_compute_network" "network_of_interest" {
   auto_create_subnetworks = false
 }
 
-resource "google_compute_firewall" "firewall_ssh" {
-  name    = "ssh-allower"
+module "firewall-module" {
+  version = "0.3.0"
+  source  = "femnad/firewall-module/gcp"
+  project = "foolproj"
   network = google_compute_network.network_of_interest.name
-
-  allow {
-    protocol = "tcp"
-    ports    = ["22"]
+  self_reachable = {
+    "22" = "tcp"
   }
-  source_ranges = [format("%s/32", jsondecode(data.http.ipinfo.body).ip)]
+  world_reachable = {
+    "80" = "tcp"
+  }
+  ip_mask = 29
+  ip_num  = 7
 }
 
 resource "google_compute_instance" "geheim_hoster" {
