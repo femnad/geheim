@@ -40,9 +40,6 @@ module "firewall-module" {
   self_reachable = {
     "22" = "tcp"
   }
-  world_reachable = {
-    "80" = "tcp"
-  }
   ip_mask = 29
   ip_num  = 7
 }
@@ -56,7 +53,7 @@ resource "google_compute_instance" "geheim_hoster" {
   }
 
   network_interface {
-    network = google_compute_network.network_of_interest.name
+    network    = google_compute_network.network_of_interest.name
     subnetwork = google_compute_subnetwork.geheim-subnet.name
     access_config {
       network_tier = "STANDARD"
