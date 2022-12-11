@@ -82,7 +82,16 @@ function geheim() {
         make
     fi
 
-    terraform apply -auto-approve
+    current_ssid=$(nmcli --terse -f SSID,ACTIVE device wifi | grep -E ':yes$' | awk -F ':' '{print $1}')
+    managed_ssid=$(pass meta/managed-connection/ssid)
+    managed_connection=false
+
+    if [ "$managed_ssid" = "$current_ssid" ]
+    then
+        managed_connection=true
+    fi
+
+    terraform apply -auto-approve -var "managed_connection=$managed_connection"
     popd
 
     pushd "${root_dir}/playbooks"

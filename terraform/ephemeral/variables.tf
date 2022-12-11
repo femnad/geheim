@@ -19,3 +19,7 @@ variable zone {
 variable managed_zone {}
 
 variable dns_name {}
+
+variable managed_connection {
+  default = false
+}
