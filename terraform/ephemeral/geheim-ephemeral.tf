@@ -33,7 +33,7 @@ resource "google_compute_network" "network_of_interest" {
 }
 
 module "firewall-module" {
-  version = "0.3.2"
+  version = "0.3.3"
   source  = "femnad/firewall-module/gcp"
   project = "foolproj"
   network = google_compute_network.network_of_interest.name
