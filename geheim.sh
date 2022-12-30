@@ -1,12 +1,17 @@
 #!/usr/bin/env bash
 set -euEo pipefail
 
+function ansible_playbook() {
+    export ANSIBLE_CONFIG="${HOME}/.config/ansible/ansible.cfg"
+    ansible-playbook $@
+}
+
 function local_sync() {
     rp="$(realpath $0)"
     root_dir=$(dirname $rp)
 
     pushd "${root_dir}/playbooks"
-    ansible-playbook local-sync.yml
+    ansible_playbook local-sync.yml
     popd
 }
 
@@ -95,7 +100,7 @@ function geheim() {
     popd
 
     pushd "${root_dir}/playbooks"
-    ansible-playbook enable-password-sync.yml
+    ansible_playbook enable-password-sync.yml
     popd
 
     pushd "${root_dir}/terraform/ephemeral"
