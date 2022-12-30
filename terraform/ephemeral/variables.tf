@@ -1,25 +1,25 @@
-variable github_user {}
+variable "github_user" {}
 
-variable volume_name {}
+variable "volume_name" {}
 
-variable project {}
+variable "project" {}
 
-variable ssh_user {}
+variable "ssh_user" {}
 
-variable ssh_email {}
+variable "ssh_email" {}
 
-variable region {
+variable "region" {
   default = "europe-west2"
 }
 
-variable zone {
+variable "zone" {
   default = "europe-west2-c"
 }
 
-variable managed_zone {}
+variable "managed_zone" {}
 
-variable dns_name {}
+variable "dns_name" {}
 
-variable managed_connection {
+variable "managed_connection" {
   default = false
 }

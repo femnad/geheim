@@ -1,29 +1,29 @@
-variable project {}
+variable "project" {}
 
-variable dns_zone_name {}
+variable "dns_zone_name" {}
 
-variable dns_name {}
+variable "dns_name" {}
 
-variable volume_name {}
+variable "volume_name" {}
 
-variable state_storage_bucket {}
+variable "state_storage_bucket" {}
 
-variable tf_service_account {}
+variable "tf_service_account" {}
 
-variable tf_service_account_display_name {}
+variable "tf_service_account_display_name" {}
 
-variable region {
+variable "region" {
   default = "europe-west-2"
 }
 
-variable zone {
+variable "zone" {
   default = "europe-west2-c"
 }
 
 provider "google" {
-  project     = var.project
-  region      = var.region
-  zone = var.zone
+  project = var.project
+  region  = var.region
+  zone    = var.zone
 }
 
 resource "google_dns_managed_zone" "geheim_zone" {
@@ -32,9 +32,9 @@ resource "google_dns_managed_zone" "geheim_zone" {
 }
 
 resource "google_compute_disk" "geheim_disk" {
-  name  = var.volume_name
+  name = var.volume_name
   size = 10
-  type  = "pd-standard"
+  type = "pd-standard"
 }
 
 resource "google_storage_bucket" "state_store" {
