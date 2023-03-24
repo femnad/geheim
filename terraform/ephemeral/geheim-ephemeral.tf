@@ -33,7 +33,7 @@ resource "google_compute_network" "network_of_interest" {
 }
 
 module "firewall-module" {
-  version = "0.5.0"
+  version = "0.5.1"
   source  = "femnad/firewall-module/gcp"
   project = "foolproj"
   network = google_compute_network.network_of_interest.name
@@ -49,7 +49,7 @@ resource "google_compute_instance" "geheim_hoster" {
   machine_type = "e2-small"
 
   metadata = {
-    ssh-keys = join("\n", formatlist(local.ssh_format_spec, [for key in jsondecode(data.http.github.body) : key.key]))
+    ssh-keys = join("\n", formatlist(local.ssh_format_spec, [for key in jsondecode(data.http.github.response_body) : key.key]))
   }
 
   network_interface {
