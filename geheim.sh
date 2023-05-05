@@ -73,6 +73,14 @@ function geheim_wait() {
     geheim
 }
 
+function geheim_destroy() {
+    root_dir=$(dirname $(realpath $0))
+    pushd "${root_dir}/terraform/ephemeral"
+
+    pushd "${root_dir}/terraform/ephemeral"
+    terraform destroy -auto-approve
+}
+
 function geheim() {
     if ! ssh-add -l > /dev/null 2>&1
     then
@@ -116,6 +124,10 @@ function main() {
 
     subcommand="$1"
     case $subcommand in
+        destroy)
+            shift
+            geheim_destroy $@
+            ;;
         local)
             shift
             geheim_local $@
