@@ -90,7 +90,7 @@ function geheim() {
     root_dir=$(dirname $(realpath $0))
     pushd "${root_dir}/terraform/ephemeral"
 
-    if ! [ -d .terraform/terraform.tfstate ]
+    if ! [ -f .terraform/terraform.tfstate ]
     then
         make
     fi

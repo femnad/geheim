@@ -33,15 +33,17 @@ resource "google_compute_network" "network_of_interest" {
 }
 
 module "firewall-module" {
-  version = "0.6.0"
+  version = "0.7.1"
   source  = "femnad/firewall-module/gcp"
-  project = "foolproj"
   network = google_compute_network.network_of_interest.name
   self_reachable = {
     "22" = "tcp"
   }
   ip_mask = var.managed_connection ? 29 : 32
   ip_num  = var.managed_connection ? 7 : 1
+  providers = {
+    google = google
+  }
 }
 
 resource "google_compute_instance" "geheim_hoster" {
