@@ -35,7 +35,7 @@ function geheim_guest() {
     fi
 
     root_dir=$(dirname $rp)
-    pushd "${root_dir}/terraform/ephemeral/guest"
+    pushd "${root_dir}/terraform/guest"
 
     if ! [ -d .terraform/ ]
     then
@@ -52,7 +52,7 @@ function geheim_guest() {
         read -p "Press enter to continue. "
     fi
 
-    pushd "${root_dir}/terraform/ephemeral/guest"
+    pushd "${root_dir}/terraform/guest"
     terraform destroy -auto-approve -var "guest_ip=${ip}"
 }
 
@@ -75,9 +75,7 @@ function geheim_wait() {
 
 function geheim_destroy() {
     root_dir=$(dirname $(realpath $0))
-    pushd "${root_dir}/terraform/ephemeral"
-
-    pushd "${root_dir}/terraform/ephemeral"
+    pushd "${root_dir}/terraform"
     terraform destroy -auto-approve
 }
 
@@ -88,7 +86,7 @@ function geheim() {
     fi
 
     root_dir=$(dirname $(realpath $0))
-    pushd "${root_dir}/terraform/ephemeral"
+    pushd "${root_dir}/terraform"
     git crypt unlock
 
     if ! [ -f .terraform/terraform.tfstate ]
@@ -112,7 +110,7 @@ function geheim() {
     ansible_playbook enable-password-sync.yml
     popd
 
-    pushd "${root_dir}/terraform/ephemeral"
+    pushd "${root_dir}/terraform"
     terraform destroy -auto-approve
 }
 
