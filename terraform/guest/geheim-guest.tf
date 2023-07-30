@@ -10,17 +10,15 @@ provider "google" {
 
 variable "guest_ip" {}
 
-data "google_compute_network" "network_of_interest" {
-  name = "geheim-network"
-}
-
-resource "google_compute_firewall" "guest_firewall" {
-  name    = "guest-allower"
-  network = data.google_compute_network.network_of_interest.name
-
-  allow {
-    protocol = "tcp"
-    ports    = ["22"]
+module "firewall-module" {
+  version = "0.10.0"
+  source  = "femnad/firewall-module/gcp"
+  network = var.network_name
+  world_reachable = {
+    remote_ips = var.guest_ip
+    port_map   = { "22" = "tcp" }
   }
-  source_ranges = [format("%s/32", var.guest_ip)]
+  providers = {
+    google = google
+  }
 }

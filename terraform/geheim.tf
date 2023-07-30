@@ -13,7 +13,7 @@ module "instance-module" {
   version         = "0.20.0"
   github_user     = "femnad"
   name            = "geheim"
-  network_name    = "geheim-network"
+  network_name    = var.network_name
   subnetwork_name = "geheim-subnetwork"
   attached_disks = [{
     source = var.volume_name,
@@ -30,7 +30,7 @@ module "dns-module" {
 }
 
 module "firewall-module" {
-  version = "0.8.0"
+  version = "0.10.0"
   source  = "femnad/firewall-module/gcp"
   network = module.instance-module.network_name
   self_reachable = {

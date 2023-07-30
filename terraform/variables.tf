@@ -21,3 +21,7 @@ variable "managed_connection" {
 }
 
 variable "disk_name" {}
+
+variable "network_name" {
+  default = "geheim-network"
+}
