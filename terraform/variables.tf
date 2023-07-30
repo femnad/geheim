@@ -4,10 +4,6 @@ variable "volume_name" {}
 
 variable "project" {}
 
-variable "ssh_user" {}
-
-variable "ssh_email" {}
-
 variable "region" {
   default = "europe-west2"
 }
@@ -23,3 +19,5 @@ variable "dns_name" {}
 variable "managed_connection" {
   default = false
 }
+
+variable "disk_name" {}

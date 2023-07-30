@@ -7,6 +7,9 @@
     - public_vars.yml
     - sync_vars.yml
 
+  vars:
+    device_partition: 1
+
   tasks:
     - name: Add the user
       user:

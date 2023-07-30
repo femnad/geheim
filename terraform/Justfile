@@ -1,0 +1,8 @@
+init:
+    terraform init -backend-config=gcs-backend-config.secret
+
+reconfigure:
+    terraform init -reconfigure -backend-config=gcs-backend-config.secret
+
+upgrade:
+    terraform init -upgrade -backend-config=gcs-backend-config.secret
