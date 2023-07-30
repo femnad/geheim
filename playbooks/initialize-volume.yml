@@ -4,7 +4,6 @@
   become: yes
 
   vars_files:
-    - public_vars.yml
     - sync_vars.yml
 
   vars:
