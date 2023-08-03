@@ -30,7 +30,7 @@ module "dns-module" {
 }
 
 module "firewall-module" {
-  version = "0.10.0"
+  version = "0.10.1"
   source  = "femnad/firewall-module/gcp"
   network = module.instance-module.network_name
   self_reachable = {
