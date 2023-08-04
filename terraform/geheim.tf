@@ -19,6 +19,9 @@ module "instance-module" {
     source = var.volume_name,
     name   = var.disk_name,
   }]
+  providers = {
+    google = google
+  }
 }
 
 module "dns-module" {
@@ -27,12 +30,16 @@ module "dns-module" {
   dns_name         = var.dns_name
   instance_ip_addr = module.instance-module.instance_ip_addr
   managed_zone     = var.managed_zone
+  providers = {
+    google = google
+  }
 }
 
 module "firewall-module" {
   version = "0.10.1"
   source  = "femnad/firewall-module/gcp"
   network = module.instance-module.network_name
+  prefix  = "geheim"
   self_reachable = {
     "22" = "tcp"
   }
