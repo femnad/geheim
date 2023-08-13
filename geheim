@@ -1,0 +1,166 @@
+#!/usr/bin/env python3
+from dataclasses import dataclass
+import argparse
+import http.client
+import json
+import os
+import shlex
+import socket
+import subprocess
+import sys
+from typing import Optional
+import urllib
+
+ANSIBLE_CONFIG = os.path.expanduser('~/.config/ansible/ansible.cfg')
+
+
+@dataclass
+class Args:
+    ip: str = ''
+    wait: bool = False
+
+
+def sh(cmdstr: str, cwd: Optional[str] = None, env: Optional[dict[str, str]] = None) -> str:
+    cmd = shlex.split(cmdstr)
+    proc = subprocess.run(cmd, text=True, capture_output=True)
+    if code := proc.returncode:
+        print(f'{cmdstr} with cwd {cwd} env {env} exited with code {code}, stderr: {proc.stderr.strip()}')
+        sys.exit(code)
+    return proc.stdout.strip()
+
+
+def sh_input(cmdstr: str, cwd: Optional[str] = None, env: Optional[dict[str, str]] = None) -> None:
+    cmd = shlex.split(cmdstr)
+    proc = subprocess.run(cmd, cwd=cwd, env=env)
+    if code := proc.returncode:
+        print(f'{cmdstr} exited with code {code}')
+        sys.exit(code)
+
+
+def ansible_playbook(playbook: str, root_dir: Optional[str] = None) -> None:
+    sh_input(f'ansible-playbook {playbook}', env={'ANSIBLE_CONFIG': ANSIBLE_CONFIG}, cwd=root_dir)
+
+
+def get_root_dir() -> str:
+    return os.path.dirname(os.path.realpath(sys.argv[0]))
+
+
+CHUNK_SIZE = 8192
+
+
+def get(url):
+    url = urllib.parse.urlparse(url)
+    conn = http.client.HTTPSConnection(url)
+    path = f'{url.path}'
+    if url.query:
+        path += '?{url.query}'
+    if url.fragment:
+        path += '#{url.fragment}'
+
+    conn.request('GET', path)
+    resp = conn.getresponse()
+    body = resp.read()
+
+    if resp.status >= 400:
+        raise Exception(f'Unexpected response status {resp.status} with body {body}')
+
+    return body
+
+
+def determine_ip() -> str:
+    body = get('https://ipinfo.io/json')
+    return json.loads(body['ip'])
+
+
+def local() -> None:
+    ensure_agent_key()
+    root_dir = os.path.dirname(os.path.realpath(sys.argv[0]))
+    ansible_playbook('local-sync.yml', root_dir=root_dir)
+
+
+def guest(args: Args) -> None:
+    wait_for_sync = False
+
+    ip = args.ip
+    if ip:
+        wait_for_sync = True
+    else:
+        ip = determine_ip()
+
+    root_dir = get_root_dir()
+
+    sh_input(f'terraform apply -auto-approve -var guest_ip={ip}', cwd=f'{root_dir}/terraform/guest')
+
+    if wait_for_sync:
+        input('Press any key to continue')
+    else:
+        local()
+
+    sh_input(f'terraform destroy -auto-approve -var guest_ip={ip}', cwd=f'{root_dir}/terraform/guest')
+
+
+def ensure_agent_key():
+    if not sh('ssh-add -l'):
+        hostname = socket.gethostname()
+        home = os.getenv('HOME')
+        sh_input(f'ssh-add {home}/.ssh/{hostname}')
+
+
+def destroy() -> None:
+    root_dir = get_root_dir()
+    sh_input('terraform destroy -auto-approve', cwd=root_dir)
+
+
+def is_managed_connection() -> bool:
+    wireless_networks = [ssid.split(':') for ssid in sh('nmcli --terse -f SSID,ACTIVE device wifi').split('\n')]
+    active_ssids = [ssid[0] for ssid in wireless_networks if ssid[1] == 'yes']
+    if len(active_ssids) != 1:
+        raise Exception('Unexpected number of active SSIDs: {len(active_ssids)}')
+
+    managed_ssid = sh('pass meta/managed-connection/ssid')
+    return managed_ssid == active_ssids[0]
+
+
+def sync(args: Args) -> None:
+    ensure_agent_key()
+    root_dir = get_root_dir()
+    sh('git crypt unlock', cwd=root_dir)
+
+    managed_connection = is_managed_connection()
+    ansible_dir = os.path.join(root_dir, 'ansible')
+    terraform_dir = os.path.join(root_dir, 'terraform')
+    sh_input(f'terraform apply -auto-approve -var managed_connection={str(managed_connection).lower()}',
+             cwd=terraform_dir)
+    ansible_playbook('sync.yml', root_dir=ansible_dir)
+    sh_input('terraform destroy -auto-approve', cwd=terraform_dir)
+
+    sh('git crypt lock', cwd=root_dir)
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    subparsers = parser.add_subparsers()
+
+    sub = subparsers.add_parser('destroy', aliases=['d'])
+    sub.set_defaults(func=destroy)
+
+    sub = subparsers.add_parser('local', aliases=['l'])
+    sub.set_defaults(func=local)
+
+    sub = subparsers.add_parser('guest', aliases=['g'])
+    sub.set_defaults(func=guest)
+
+    sub = subparsers.add_parser('sync', aliases=['s'])
+    sub.set_defaults(func=sync)
+    sub.add_argument('-w', '--wait', action='store_true')
+
+    pargs = parser.parse_args()
+    if not hasattr(pargs, 'func'):
+        pargs.func = sync
+
+    args = Args(**{k: v for k, v in pargs.__dict__.items() if k != 'func'})
+    pargs.func(args)
+
+
+if __name__ == '__main__':
+    main()

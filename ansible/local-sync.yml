@@ -3,7 +3,7 @@
   name: Sync local repository
 
   vars_files:
-    - sync_vars.yml
+    - vars.yml
 
   vars:
     password_store_dir: "{{ lookup('env', 'PASSWORD_STORE_DIR', default=ansible_user_dir + '/.password-store') }}"

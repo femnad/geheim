@@ -3,7 +3,7 @@
   name: Cleanup local known hosts
 
   vars_files:
-    - sync_vars.yml
+    - vars.yml
 
   tasks:
     - name: Ensure SSH-ability
@@ -15,7 +15,7 @@
   remote_user: '{{ geheim_ssh_user }}'
 
   vars_files:
-    - sync_vars.yml
+    - vars.yml
 
   vars:
     encryption_passphrase_lookup_key: '{{ password_lookup_key }}'
