@@ -20,17 +20,20 @@ class Args:
     wait: bool = False
 
 
-def sh(cmdstr: str, cwd: Optional[str] = None, env: Optional[dict[str, str]] = None) -> str:
+def sh(cmdstr: str, cwd: Optional[str] = None) -> str:
     cmd = shlex.split(cmdstr)
-    proc = subprocess.run(cmd, text=True, capture_output=True)
+    proc = subprocess.run(cmd, cwd=cwd, text=True, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
     if code := proc.returncode:
-        print(f'{cmdstr} with cwd {cwd} env {env} exited with code {code}, stderr: {proc.stderr.strip()}')
+        print(f'{cmdstr} with cwd {cwd} exited with code {code}, '
+              f'stdout: {proc.stdout.strip()}, stderr: {proc.stderr.strip()}')
         sys.exit(code)
     return proc.stdout.strip()
 
 
 def sh_input(cmdstr: str, cwd: Optional[str] = None, env: Optional[dict[str, str]] = None) -> None:
     cmd = shlex.split(cmdstr)
+    env = env or {}
+    env = os.environ | env
     proc = subprocess.run(cmd, cwd=cwd, env=env)
     if code := proc.returncode:
         print(f'{cmdstr} exited with code {code}')
@@ -100,7 +103,8 @@ def guest(args: Args) -> None:
 
 
 def ensure_agent_key():
-    if not sh('ssh-add -l'):
+    proc = subprocess.run(['ssh-add', '-l'], stdout=subprocess.PIPE)
+    if proc.returncode:
         hostname = socket.gethostname()
         home = os.getenv('HOME')
         sh_input(f'ssh-add {home}/.ssh/{hostname}')
