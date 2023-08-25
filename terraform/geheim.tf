@@ -36,7 +36,7 @@ module "dns-module" {
 }
 
 module "firewall-module" {
-  version = "0.10.1"
+  version = "0.10.2"
   source  = "femnad/firewall-module/gcp"
   network = module.instance-module.network_name
   prefix  = "geheim"
