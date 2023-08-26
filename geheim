@@ -91,7 +91,8 @@ def guest(args: Args) -> None:
         ip = determine_ip()
 
     root_dir = get_root_dir()
-
+    terraform_dir = f'{root_dir}/terraform/guest'
+    sh_input('just init', cwd=terraform_dir)
     sh_input(f'terraform apply -auto-approve -var guest_ip={ip}', cwd=f'{root_dir}/terraform/guest')
 
     if wait_for_sync:
@@ -133,6 +134,7 @@ def sync(args: Args) -> None:
     managed_connection = is_managed_connection()
     ansible_dir = os.path.join(root_dir, 'ansible')
     terraform_dir = os.path.join(root_dir, 'terraform')
+    sh_input('just init', cwd=terraform_dir)
     sh_input(f'terraform apply -auto-approve -var managed_connection={str(managed_connection).lower()}',
              cwd=terraform_dir)
     ansible_playbook('sync.yml', root_dir=ansible_dir)
