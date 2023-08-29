@@ -40,8 +40,11 @@ def sh_input(cmdstr: str, cwd: Optional[str] = None, env: Optional[dict[str, str
         sys.exit(code)
 
 
-def ansible_playbook(playbook: str, root_dir: Optional[str] = None) -> None:
-    sh_input(f'ansible-playbook {playbook}', env={'ANSIBLE_CONFIG': ANSIBLE_CONFIG}, cwd=root_dir)
+def ansible_playbook(playbook: str,
+                     root_dir: Optional[str] = None,
+                     extra_vars: Optional[dict[str, str]] = None) -> None:
+    maybe_vars = ' ' + ' '.join([f'-e {k}={v}' for k, v in extra_vars.items()]) if extra_vars else ''
+    sh_input(f'ansible-playbook {playbook}{maybe_vars}', env={'ANSIBLE_CONFIG': ANSIBLE_CONFIG}, cwd=root_dir)
 
 
 def get_root_dir() -> str:
@@ -137,9 +140,11 @@ def sync(args: Args) -> None:
     sh_input('just init', cwd=terraform_dir)
     sh_input(f'terraform apply -auto-approve -var managed_connection={str(managed_connection).lower()}',
              cwd=terraform_dir)
-    ansible_playbook('sync.yml', root_dir=ansible_dir)
-    sh_input('terraform destroy -auto-approve', cwd=terraform_dir)
 
+    extra_vars = {'wait_before_destroy': 'true'} if args.wait else {}
+    ansible_playbook('sync.yml', root_dir=ansible_dir, extra_vars=extra_vars)
+
+    sh_input('terraform destroy -auto-approve', cwd=terraform_dir)
     sh('git crypt lock', cwd=root_dir)
 
 
