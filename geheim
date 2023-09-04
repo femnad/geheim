@@ -78,10 +78,11 @@ def determine_ip() -> str:
     return json.loads(body['ip'])
 
 
-def local() -> None:
+def local(_: Args) -> None:
     ensure_agent_key()
     root_dir = os.path.dirname(os.path.realpath(sys.argv[0]))
-    ansible_playbook('local-sync.yml', root_dir=root_dir)
+    ansible_dir = os.path.join(root_dir, 'ansible')
+    ansible_playbook('local-sync.yml', root_dir=ansible_dir)
 
 
 def guest(args: Args) -> None:
