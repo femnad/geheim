@@ -102,7 +102,7 @@ def guest(args: Args) -> None:
     if wait_for_sync:
         input('Press any key to continue')
     else:
-        local()
+        local(args)
 
     sh_input(f'terraform destroy -auto-approve -var guest_ip={ip}', cwd=f'{root_dir}/terraform/guest')
 
@@ -123,6 +123,10 @@ def destroy() -> None:
 def is_managed_connection() -> bool:
     wireless_networks = [ssid.split(':') for ssid in sh('nmcli --terse -f SSID,ACTIVE device wifi').split('\n')]
     active_ssids = [ssid[0] for ssid in wireless_networks if ssid[1] == 'yes']
+    if not active_ssids:
+        # Wired?
+        return True
+
     if len(active_ssids) != 1:
         raise Exception('Unexpected number of active SSIDs: {len(active_ssids)}')
 
