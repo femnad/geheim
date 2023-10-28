@@ -5,43 +5,45 @@ terraform {
   }
 }
 
+data "sops_file" "secret" {
+  source_file = "secret.sops.yml"
+}
+
 provider "google" {
-  project = var.project
+  project = nonsensitive(data.sops_file.secret.data["project"])
   region  = var.region
   zone    = var.zone
 }
 
-module "instance-module" {
-  source          = "femnad/instance-module/gcp"
-  version         = "0.20.0"
-  github_user     = "femnad"
-  name            = "geheim"
-  network_name    = var.network_name
-  subnetwork_name = "geheim-subnetwork"
+module "instance" {
+  source      = "femnad/instance-module/gcp"
+  version     = "0.23.2"
+  github_user = "femnad"
+  name        = "geheim"
   attached_disks = [{
-    source = var.volume_name,
-    name   = var.disk_name,
+    source = nonsensitive(data.sops_file.secret.data["volume_name"]),
+    name   = nonsensitive(data.sops_file.secret.data["disk_name"]),
   }]
   providers = {
     google = google
   }
 }
 
-module "dns-module" {
+module "dns" {
   source           = "femnad/dns-module/gcp"
   version          = "0.8.0"
-  dns_name         = var.dns_name
-  instance_ip_addr = module.instance-module.instance_ip_addr
-  managed_zone     = var.managed_zone
+  dns_name         = nonsensitive(data.sops_file.secret.data["dns_name"])
+  instance_ip_addr = module.instance.instance_ip_addr
+  managed_zone     = nonsensitive(data.sops_file.secret.data["managed_zone"])
   providers = {
     google = google
   }
 }
 
-module "firewall-module" {
-  version = "0.10.2"
+module "firewall" {
+  version = "0.11.0"
   source  = "femnad/firewall-module/gcp"
-  network = module.instance-module.network_name
+  network = module.instance.network_name
   prefix  = "geheim"
   self_reachable = {
     "22" = "tcp"

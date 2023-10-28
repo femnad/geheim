@@ -1,8 +1,10 @@
-variable "github_user" {}
+variable "managed_connection" {
+  default = false
+}
 
-variable "volume_name" {}
-
-variable "project" {}
+variable "network_name" {
+  default = "geheim-network"
+}
 
 variable "region" {
   default = "europe-west2"
@@ -10,18 +12,4 @@ variable "region" {
 
 variable "zone" {
   default = "europe-west2-c"
-}
-
-variable "managed_zone" {}
-
-variable "dns_name" {}
-
-variable "managed_connection" {
-  default = false
-}
-
-variable "disk_name" {}
-
-variable "network_name" {
-  default = "geheim-network"
 }
