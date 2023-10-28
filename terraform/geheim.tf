@@ -1,5 +1,8 @@
 terraform {
-  backend "gcs" {}
+  backend "gcs" {
+    bucket = "tf-fcd-sync"
+    prefix = "geheim"
+  }
 }
 
 provider "google" {
