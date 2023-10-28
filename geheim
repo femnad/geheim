@@ -137,7 +137,6 @@ def is_managed_connection() -> bool:
 def sync(args: Args) -> None:
     ensure_agent_key()
     root_dir = get_root_dir()
-    sh('git crypt unlock', cwd=root_dir)
 
     managed_connection = is_managed_connection()
     ansible_dir = os.path.join(root_dir, 'ansible')
@@ -150,7 +149,6 @@ def sync(args: Args) -> None:
     ansible_playbook('sync.yml', root_dir=ansible_dir, extra_vars=extra_vars)
 
     sh_input('terraform destroy -auto-approve', cwd=terraform_dir)
-    sh('git crypt lock', cwd=root_dir)
 
 
 def main():
