@@ -15,20 +15,26 @@ provider "google" {
   zone    = var.zone
 }
 
+provider "google-beta" {
+  project = nonsensitive(data.sops_file.secret.data["project"])
+  region  = var.region
+  zone    = var.zone
+}
+
 module "instance" {
-  source      = "femnad/instance-module/gcp"
-  version     = "0.23.2"
-  github_user = "femnad"
+  source  = "femnad/lazyspot/gcp"
+  version = "0.1.0"
 
   attached_disks = [{
     source = nonsensitive(data.sops_file.secret.data["volume_name"]),
     name   = nonsensitive(data.sops_file.secret.data["disk_name"]),
   }]
-  name = "geheim"
-  spot = true
+  github_user     = "femnad"
+  max_run_seconds = 3600
+  name            = "geheim"
 
   providers = {
-    google = google
+    google-beta = google-beta
   }
 }
 
