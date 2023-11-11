@@ -9,55 +9,15 @@
     password_store_dir: "{{ lookup('env', 'PASSWORD_STORE_DIR', default=ansible_user_dir + '/.password-store') }}"
 
   tasks:
-    - name: Wait until DNS is resolving
-      command: host {{ geheim_hoster }}
-      register: geheim_ip
-      retries: 10
-      delay: 60
-      until: geheim_ip.rc == 0
-
-    - name: Remove existing known host(s)
-      known_hosts:
-        name: '{{ geheim_hoster }}'
-        state: absent
-
-    - name: Purge host keys of IPs from previous instances
-      lineinfile:
-        path: '{{ ansible_user_dir }}/.ssh/known_hosts'
-        regexp: '^{{ geheim_ip.stdout.split()[-1] }} .*'
-        state: absent
-
-    - name: Check hashed known hosts for hostname
-      command: ssh-keygen -H -F {{ geheim_hoster }}
-      register: ssh_keygen_hostname
-      failed_when: ssh_keygen_hostname.rc not in [0, 1]
-
-    - name: Purge hashed known hosts of matched hostname
-      lineinfile:
-        path: '{{ ansible_user_dir }}/.ssh/known_hosts'
-        line: '{{ ssh_keygen_hostname.stdout_lines[-1] }}'
-        state: absent
-      when: ssh_keygen_hostname.rc == 0
-
-    - name: Check hashed known hosts for IP
-      command: ssh-keygen -H -F {{ geheim_ip.stdout.split()[-1] }}
-      register: ssh_keygen_ip
-      failed_when: ssh_keygen_ip.rc not in [0, 1]
-
-    - name: Purge hashed known hosts of matched IP
-      lineinfile:
-        path: '{{ ansible_user_dir }}/.ssh/known_hosts'
-        line: '{{ ssh_keygen_ip.stdout_lines[-1] }}'
-        state: absent
-      when: ssh_keygen_ip.rc == 0
-
-    - name: Add keys for host
-      shell: ssh-keyscan {{ geheim_hoster }} | grep ecdsa-sha2-nistp256 >> '{{ ansible_user_dir }}/.ssh/known_hosts'
+    - name: Ensure ssh-ability
+      command:
+        cmd: pressh {{ geheim_hoster }}
 
     - name: Git sync
-      shell: |
-        git pull -r
-        git push
+      shell:
+        cmd: |
+          git pull -r
+          git push
       args:
         chdir: '{{ password_store_dir }}'
 ...
