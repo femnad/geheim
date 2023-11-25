@@ -30,6 +30,7 @@ module "instance" {
     name   = nonsensitive(data.sops_file.secret.data["disk_name"]),
   }]
   github_user     = "femnad"
+  machine_type    = "e2-small"
   max_run_seconds = 3600
   name            = "geheim"
 
