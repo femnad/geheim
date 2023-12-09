@@ -16,7 +16,7 @@ ANSIBLE_CONFIG = os.path.expanduser('~/.config/ansible/ansible.cfg')
 
 @dataclass
 class Args:
-    managed_connection: bool
+    managed_connection: bool | None = None
     ip: str = ''
     wait: bool = False
 
@@ -116,9 +116,9 @@ def ensure_agent_key():
         sh_input(f'ssh-add {home}/.ssh/{hostname}')
 
 
-def destroy() -> None:
+def destroy(_) -> None:
     root_dir = get_root_dir()
-    sh_input('terraform destroy -auto-approve', cwd=root_dir)
+    sh_input('terraform destroy -auto-approve', cwd=f'{root_dir}/terraform')
 
 
 def is_managed_connection() -> bool:
