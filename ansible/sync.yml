@@ -19,8 +19,9 @@
 
   vars:
     encryption_passphrase_lookup_key: '{{ password_lookup_key }}'
-    encryption_passphrase: "{{ lookup('passwordstore', encryption_passphrase_lookup_key) }}"
+    encryption_passphrase: "{{ lookup('community.general.onepassword', encryption_passphrase_lookup_key) }}"
     password_store_dir: "{{ lookup('env', 'PASSWORD_STORE_DIR', default=ansible_user_dir + '/.password-store') }}"
+    repo_url: '{{ repo_user_name }}@{{ geheim_hoster }}:{{ repo_path }}/{{ repo_dir }}'
     wait_before_destroy: false
 
   tasks:
@@ -112,12 +113,26 @@
         recurse: yes
       become: yes
 
+    - name: Lookup password store dir
+      ansible.builtin.stat:
+        path: '{{ password_store_dir }}'
+      register: ps
+
+    - name: Git clone
+      ansible.builtin.git:
+        repo: '{{ repo_url }}'
+        dest: '{{ password_store_dir }}'
+        version: main
+      when: ps.stat.isdir is not defined
+      delegate_to: localhost
+
     - name: Git sync
       shell: |
         git pull -r
         git push
       args:
         chdir: '{{ password_store_dir }}'
+      when: ps.stat.isdir is defined and ps.stat.isdir
       delegate_to: localhost
 
     - name: Show notification

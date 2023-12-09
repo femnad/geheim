@@ -16,6 +16,7 @@ ANSIBLE_CONFIG = os.path.expanduser('~/.config/ansible/ansible.cfg')
 
 @dataclass
 class Args:
+    managed_connection: bool
     ip: str = ''
     wait: bool = False
 
@@ -138,7 +139,11 @@ def sync(args: Args) -> None:
     ensure_agent_key()
     root_dir = get_root_dir()
 
-    managed_connection = is_managed_connection()
+    if args.managed_connection is None:
+        managed_connection = is_managed_connection()
+    else:
+        managed_connection = args.managed_connection
+
     ansible_dir = os.path.join(root_dir, 'ansible')
     terraform_dir = os.path.join(root_dir, 'terraform')
     sh_input('just init', cwd=terraform_dir)
@@ -167,6 +172,7 @@ def main():
     sub = subparsers.add_parser('sync', aliases=['s'])
     sub.set_defaults(func=sync)
     sub.add_argument('-w', '--wait', action='store_true')
+    sub.add_argument('-m', '--managed-connection', action=argparse.BooleanOptionalAction)
 
     pargs = parser.parse_args()
     if not hasattr(pargs, 'func'):
