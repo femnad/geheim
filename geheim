@@ -131,7 +131,7 @@ def is_managed_connection() -> bool:
     if len(active_ssids) != 1:
         raise Exception('Unexpected number of active SSIDs: {len(active_ssids)}')
 
-    managed_ssid = sh('pass meta/managed-connection/ssid')
+    managed_ssid = sh('op get meta/managed-connection/ssid --fields password')
     return managed_ssid == active_ssids[0]
 
 
@@ -139,15 +139,12 @@ def sync(args: Args) -> None:
     ensure_agent_key()
     root_dir = get_root_dir()
 
-    if args.managed_connection is None:
-        managed_connection = is_managed_connection()
-    else:
-        managed_connection = args.managed_connection
+    managed = args.managed_connection if args.managed_connection is not None else is_managed_connection()
 
     ansible_dir = os.path.join(root_dir, 'ansible')
     terraform_dir = os.path.join(root_dir, 'terraform')
     sh_input('just init', cwd=terraform_dir)
-    sh_input(f'terraform apply -auto-approve -var managed_connection={str(managed_connection).lower()}',
+    sh_input(f'terraform apply -auto-approve -var managed_connection={str(managed).lower()}',
              cwd=terraform_dir)
 
     extra_vars = {'wait_before_destroy': 'true'} if args.wait else {}
