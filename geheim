@@ -131,7 +131,7 @@ def is_managed_connection() -> bool:
     if len(active_ssids) != 1:
         raise Exception('Unexpected number of active SSIDs: {len(active_ssids)}')
 
-    managed_ssid = sh('op get meta/managed-connection/ssid --fields password')
+    managed_ssid = sh('op items get meta/managed-connection/ssid --fields password')
     return managed_ssid == active_ssids[0]
 
 
