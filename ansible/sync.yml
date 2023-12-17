@@ -19,7 +19,8 @@
 
   vars:
     encryption_passphrase_lookup_key: '{{ password_lookup_key }}'
-    encryption_passphrase: "{{ lookup('community.general.onepassword', encryption_passphrase_lookup_key) }}"
+    onepassword_passphrase: "{{ lookup('community.general.onepassword', encryption_passphrase_lookup_key) }}"
+    pass_passphrase: "{{ lookup('passwordstore', encryption_passphrase_lookup_key) }}"
     password_store_dir: "{{ lookup('env', 'PASSWORD_STORE_DIR', default=ansible_user_dir + '/.password-store') }}"
     repo_url: '{{ repo_user_name }}@{{ geheim_hoster }}:{{ repo_path }}/{{ repo_dir }}'
     wait_before_destroy: false
@@ -51,6 +52,21 @@
           - cryptsetup
           - git
       become: yes
+
+    - name: Check if 1password is available
+      ansible.builtin.command:
+        cmd: op accounts list
+      register: op_out
+      failed_when: op_out.rc not in [0, 1]
+      delegate_to: localhost
+
+    - set_fact:
+        encryption_passphrase: '{{ onepassword_passphrase }}'
+      when: op_out.rc == 0
+
+    - set_fact:
+        encryption_passphrase: '{{ pass_passphrase }}'
+      when: op_out.rc == 1
 
     - name: Save the key file
       lineinfile:
