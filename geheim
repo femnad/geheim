@@ -119,13 +119,8 @@ def ensure_agent_key():
 
 def return_code_zero(cmdstr: str) -> bool:
     cmd = shlex.split(cmdstr)
-    proc = subprocess.run(cmd)
+    proc = subprocess.run(cmd, stdout=subprocess.DEVNULL)
     return proc.returncode == 0
-
-
-def destroy(_) -> None:
-    root_dir = get_root_dir()
-    sh_input('terraform destroy -auto-approve', cwd=f'{root_dir}/terraform')
 
 
 def onepassword_available() -> bool:
@@ -160,6 +155,11 @@ def is_managed_connection() -> bool:
         raise Exception('Unexpected number of active SSIDs: {len(active_ssids)}')
 
     return managed_ssid == active_ssids[0]
+
+
+def destroy(_) -> None:
+    root_dir = get_root_dir()
+    sh_input('terraform destroy -auto-approve', cwd=f'{root_dir}/terraform')
 
 
 def sync(args: Args) -> None:
