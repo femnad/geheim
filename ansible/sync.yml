@@ -132,6 +132,7 @@
     - name: Lookup password store dir
       ansible.builtin.stat:
         path: '{{ password_store_dir }}'
+      delegate_to: localhost
       register: ps
 
     - name: Git clone
