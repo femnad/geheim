@@ -124,7 +124,12 @@ def return_code_zero(cmdstr: str) -> bool:
 
 
 def onepassword_available() -> bool:
-    return return_code_zero('op accounts list')
+    cmd = shlex.split('op account list')
+    proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+    if proc.returncode:
+        return False
+
+    return len(proc.stdout.strip()) > 0
 
 
 def passwordstore_available() -> bool:

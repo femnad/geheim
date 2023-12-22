@@ -60,11 +60,13 @@
       failed_when: op_out.rc not in [0, 1]
       delegate_to: localhost
 
-    - set_fact:
+    - name: Use 1password for fetching the secret value
+      set_fact:
         encryption_passphrase: '{{ onepassword_passphrase }}'
       when: op_out.rc == 0
 
-    - set_fact:
+    - name: Use pass for fetching the secret value
+      set_fact:
         encryption_passphrase: '{{ pass_passphrase }}'
       when: op_out.rc == 1
 
