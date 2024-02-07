@@ -137,10 +137,10 @@ def passwordstore_available() -> bool:
 
 
 def get_secret(secret_name: str) -> str | None:
-    if onepassword_available():
-        return sh(f'op items get {secret_name} --fields password')
-    elif passwordstore_available():
+    if passwordstore_available():
         return sh(f'pass {secret_name}')
+    elif onepassword_available():
+        return sh(f'op items get {secret_name} --fields password')
     return None
 
 
