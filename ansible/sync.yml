@@ -53,22 +53,30 @@
           - git
       become: yes
 
+    - name: Check if pass is available
+      ansible.builtin.command:
+        cmd: pass
+      register: pass_out
+      failed_when: pass_out.rc not in [0, 1]
+      delegate_to: localhost
+
+    - name: Use pass for fetching the secret value
+      set_fact:
+        encryption_passphrase: '{{ pass_passphrase }}'
+      when: pass_out.rc == 0
+
     - name: Check if 1password is available
       ansible.builtin.command:
         cmd: op accounts list
       register: op_out
       failed_when: op_out.rc not in [0, 1]
       delegate_to: localhost
+      when: pass_out.rc == 1
 
     - name: Use 1password for fetching the secret value
       set_fact:
         encryption_passphrase: '{{ onepassword_passphrase }}'
-      when: op_out.rc == 0
-
-    - name: Use pass for fetching the secret value
-      set_fact:
-        encryption_passphrase: '{{ pass_passphrase }}'
-      when: op_out.rc == 1
+      when: pass_out.rc == 1 and op_out.rc == 0
 
     - name: Save the key file
       lineinfile:
