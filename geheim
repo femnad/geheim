@@ -17,6 +17,7 @@ MANAGED_CONNECTION_SECRET = 'meta/managed-connection/ssid'
 
 @dataclass
 class Args:
+    dont_provision: bool = False
     managed_connection: bool | None = None
     ip: str = ''
     wait: bool = False
@@ -80,8 +81,21 @@ def determine_ip() -> str:
     return json.loads(body['ip'])
 
 
+def ensure_agent_key(func):
+
+    def inner(*args, **kwargs):
+        proc = subprocess.run(['ssh-add', '-l'], stdout=subprocess.PIPE)
+        if proc.returncode:
+            hostname = socket.gethostname()
+            home = os.getenv('HOME')
+            sh_input(f'ssh-add {home}/.ssh/{hostname}')
+        func(*args, **kwargs)
+
+    return inner
+
+
+@ensure_agent_key
 def local(_: Args) -> None:
-    ensure_agent_key()
     root_dir = os.path.dirname(os.path.realpath(sys.argv[0]))
     ansible_dir = os.path.join(root_dir, 'ansible')
     ansible_playbook('local-sync.yml', root_dir=ansible_dir)
@@ -107,14 +121,6 @@ def guest(args: Args) -> None:
         local(args)
 
     sh_input(f'terraform destroy -auto-approve -var guest_ip={ip}', cwd=f'{root_dir}/terraform/guest')
-
-
-def ensure_agent_key():
-    proc = subprocess.run(['ssh-add', '-l'], stdout=subprocess.PIPE)
-    if proc.returncode:
-        hostname = socket.gethostname()
-        home = os.getenv('HOME')
-        sh_input(f'ssh-add {home}/.ssh/{hostname}')
 
 
 def return_code_zero(cmdstr: str) -> bool:
@@ -167,17 +173,17 @@ def destroy(_) -> None:
     sh_input('terraform destroy -auto-approve', cwd=f'{root_dir}/terraform')
 
 
+@ensure_agent_key
 def sync(args: Args) -> None:
-    ensure_agent_key()
     root_dir = get_root_dir()
 
-    managed = args.managed_connection if args.managed_connection is not None else is_managed_connection()
+    if not args.dont_provision:
+        managed = args.managed_connection if args.managed_connection is not None else is_managed_connection()
+        terraform_dir = os.path.join(root_dir, 'terraform')
+        sh_input('just init', cwd=terraform_dir)
+        sh_input(f'terraform apply -auto-approve -var managed_connection={str(managed).lower()}', cwd=terraform_dir)
 
     ansible_dir = os.path.join(root_dir, 'ansible')
-    terraform_dir = os.path.join(root_dir, 'terraform')
-    sh_input('just init', cwd=terraform_dir)
-    sh_input(f'terraform apply -auto-approve -var managed_connection={str(managed).lower()}', cwd=terraform_dir)
-
     extra_vars = {'wait_before_destroy': 'true'} if args.wait else {}
     ansible_playbook('sync.yml', root_dir=ansible_dir, extra_vars=extra_vars)
 
@@ -199,6 +205,7 @@ def main():
 
     sub = subparsers.add_parser('sync', aliases=['s'])
     sub.set_defaults(func=sync)
+    sub.add_argument('-p', '--dont-provision', action='store_true')
     sub.add_argument('-w', '--wait', action='store_true')
     sub.add_argument('-m', '--managed-connection', action=argparse.BooleanOptionalAction)
 
