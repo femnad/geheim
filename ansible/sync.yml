@@ -91,13 +91,7 @@
       tags: volume-ready
 
     - name: Shred the key file
-      command: shred '{{ keyfile_path }}'
-      become: yes
-
-    - name: Remove the key file
-      file:
-        path: '{{ keyfile_path }}'
-        state: absent
+      command: shred -u '{{ keyfile_path }}'
       become: yes
 
     - name: Initialize the mount path
