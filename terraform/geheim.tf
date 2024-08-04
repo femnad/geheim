@@ -15,17 +15,11 @@ provider "google" {
   zone    = var.zone
 }
 
-provider "google-beta" {
-  project = nonsensitive(data.sops_file.secret.data["project"])
-  region  = var.region
-  zone    = var.zone
-}
-
 module "instance" {
   source  = "femnad/lazyspot/gcp"
-  version = "0.1.0"
+  version = "0.3.0"
 
-  attached_disks = [{
+  disks = [{
     source = nonsensitive(data.sops_file.secret.data["volume_name"]),
     name   = nonsensitive(data.sops_file.secret.data["disk_name"]),
   }]
@@ -34,37 +28,14 @@ module "instance" {
   max_run_seconds = 3600
   name            = "geheim"
 
-  providers = {
-    google-beta = google-beta
+  dns = {
+    name = nonsensitive(data.sops_file.secret.data["dns_name"])
+    zone = nonsensitive(data.sops_file.secret.data["managed_zone"])
   }
-}
 
-module "dns" {
-  source  = "femnad/dns-module/gcp"
-  version = "0.8.0"
-
-  dns_name         = nonsensitive(data.sops_file.secret.data["dns_name"])
-  instance_ip_addr = module.instance.instance_ip_addr
-  managed_zone     = nonsensitive(data.sops_file.secret.data["managed_zone"])
-
-  providers = {
-    google = google
+  firewall = {
+    ip_mask = var.managed_connection ? 29 : 32
+    ip_num  = var.managed_connection ? 7 : 1
   }
-}
 
-module "firewall" {
-  version = "0.11.0"
-  source  = "femnad/firewall-module/gcp"
-
-  network = module.instance.network_name
-  prefix  = "geheim"
-  self_reachable = {
-    "22" = "tcp"
-  }
-  ip_mask = var.managed_connection ? 29 : 32
-  ip_num  = var.managed_connection ? 7 : 1
-
-  providers = {
-    google = google
-  }
 }
