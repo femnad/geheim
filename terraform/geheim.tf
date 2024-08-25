@@ -17,25 +17,26 @@ provider "google" {
 
 module "instance" {
   source  = "femnad/lazyspot/gcp"
-  version = "0.3.0"
+  version = "0.6.3"
 
   disks = [{
     source = nonsensitive(data.sops_file.secret.data["volume_name"]),
     name   = nonsensitive(data.sops_file.secret.data["disk_name"]),
   }]
-  github_user     = "femnad"
-  machine_type    = "e2-small"
-  max_run_seconds = 3600
-  name            = "geheim"
-
   dns = {
     name = nonsensitive(data.sops_file.secret.data["dns_name"])
     zone = nonsensitive(data.sops_file.secret.data["managed_zone"])
   }
 
-  firewall = {
-    ip_mask = var.managed_connection ? 29 : 32
-    ip_num  = var.managed_connection ? 7 : 1
-  }
+  github_user     = "femnad"
+  machine_type    = "e2-small"
+  max_run_seconds = 3600
+  name            = "geheim"
 
+  firewall = {
+    self = {
+      ip_mask = var.managed_connection ? 29 : 32
+      ip_num  = var.managed_connection ? 7 : 1
+    }
+  }
 }
