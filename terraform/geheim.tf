@@ -17,7 +17,7 @@ provider "google" {
 
 module "instance" {
   source  = "femnad/lazyspot/gcp"
-  version = "0.6.3"
+  version = "0.6.5"
 
   disks = [{
     source = nonsensitive(data.sops_file.secret.data["volume_name"]),
