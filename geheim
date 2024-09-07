@@ -14,7 +14,7 @@ import urllib
 import requests
 
 ANSIBLE_CONFIG = os.path.expanduser('~/.config/ansible/ansible.cfg')
-IPINFO_URL = 'https//ipinfo.io'
+IPINFO_URL = 'https://ipinfo.io'
 MANAGED_CONNECTION_SECRET = 'meta/managed-connection/as-number'
 
 
